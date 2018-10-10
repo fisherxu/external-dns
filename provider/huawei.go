@@ -32,14 +32,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
 	"github.com/kubernetes-incubator/external-dns/endpoint"
 	"github.com/kubernetes-incubator/external-dns/plan"
-)
-
-// BasicDateFormat and BasicDateFormatShort define aws-date format
-const (
-	HeaderAuthToken = "X-Auth-Token"
 )
 
 // HuaweiCloudProvider implements the DNS provider for Huawei Cloud.
@@ -48,10 +42,6 @@ type HuaweiCloudProvider struct {
 	zoneIDFilter ZoneIDFilter
 	client       *gophercloud.ServiceClient
 	config       *huaweiCloudConfig
-}
-
-// Client represents the client config for Huawei.
-type Client struct {
 }
 
 type huaweiCloudConfig struct {
@@ -67,7 +57,7 @@ type huaweiCloudConfig struct {
 }
 
 // NewAlibabaCloudProvider creates a new Alibaba Cloud provider.
-func NewHuaweiCloudProvider(configFile string) (*HuaweiCloudProvider, error) {
+func NewHuaweiCloudProvider(configFile string, domainFilter DomainFilter, zoneIDFileter ZoneIDFilter) (*HuaweiCloudProvider, error) {
 	cfg := &huaweiCloudConfig{}
 	contents, err := ioutil.ReadFile(configFile)
 	if err != nil {
@@ -90,8 +80,10 @@ func NewHuaweiCloudProvider(configFile string) (*HuaweiCloudProvider, error) {
 	}
 
 	provider := &HuaweiCloudProvider{
-		client: dnsClient,
-		config: cfg,
+		client:       dnsClient,
+		config:       cfg,
+		domainFilter: domainFilter,
+		zoneIDFilter: zoneIDFileter,
 	}
 
 	go wait.Forever(provider.updateProviderClient, 2*time.Hour)
@@ -105,13 +97,81 @@ func (p *HuaweiCloudProvider) Records() ([]*endpoint.Endpoint, error) {
 	}
 	var endpoints []*endpoint.Endpoint
 	for _, record := range records {
-		ep := endpoint.NewEndpointWithTTL(record.Name, record.Type, endpoint.TTL(record.TTL), record.Records...)
+		ep := endpoint.NewEndpointWithZone(record.Name, record.Type, endpoint.TTL(record.TTL), record.ZoneID, record.ID, record.Records...)
 		endpoints = append(endpoints, ep)
 	}
 	return endpoints, nil
 }
 
 func (p *HuaweiCloudProvider) ApplyChanges(changes *plan.Changes) error {
+	if changes == nil || len(changes.Create)+len(changes.Delete)+len(changes.UpdateNew) == 0 {
+		// No op
+		return nil
+	}
+	p.createRecords(changes.Create)
+	p.deleteRecords(changes.Delete)
+	p.updateRecords(changes.UpdateNew)
+	return nil
+}
+
+func (p *HuaweiCloudProvider) createRecords(endpoints []*endpoint.Endpoint) error {
+	for _, endpoint := range endpoints {
+		p.createRecord(endpoint)
+	}
+	return nil
+}
+
+func (p *HuaweiCloudProvider) createRecord(endpoint *endpoint.Endpoint) error {
+	createOpts := recordsets.CreateOpts{
+		Name:    endpoint.DNSName,
+		Type:    endpoint.RecordType,
+		TTL:     int(endpoint.RecordTTL),
+		Records: endpoint.Targets,
+	}
+
+	_, err := recordsets.Create(p.client, endpoint.ZoneID, createOpts).Extract()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *HuaweiCloudProvider) deleteRecords(endpoints []*endpoint.Endpoint) error {
+	for _, endpoint := range endpoints {
+		p.deleteRecord(endpoint)
+	}
+
+	return nil
+}
+
+func (p *HuaweiCloudProvider) deleteRecord(endpoint *endpoint.Endpoint) error {
+	err := recordsets.Delete(p.client, endpoint.ZoneID, endpoint.RecordsetID).ExtractErr()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *HuaweiCloudProvider) updateRecords(endpoints []*endpoint.Endpoint) error {
+	for _, endpoint := range endpoints {
+		p.updateRecord(endpoint)
+	}
+
+	return nil
+}
+
+func (p *HuaweiCloudProvider) updateRecord(endpoint *endpoint.Endpoint) error {
+	updateOpts := recordsets.UpdateOpts{
+		TTL:     int(endpoint.RecordTTL),
+		Records: endpoint.Targets,
+	}
+	_, err := recordsets.Update(p.client, endpoint.ZoneID, endpoint.RecordsetID, updateOpts).Extract()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

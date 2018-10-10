@@ -128,6 +128,13 @@ type Endpoint struct {
 	// ProviderSpecific stores provider specific config
 	// +optional
 	ProviderSpecific ProviderSpecific `json:"providerSpecific,omitempty"`
+
+	// ZoneID stores ID of endpoint's zone
+	// +optional
+	ZoneID string `json:"zoneID,omitempty"`
+	// RecordsetID stores ID of endpoint's Recordset
+	// +optional
+	RecordsetID string `json:"recordsetID,omitempty"`
 }
 
 // NewEndpoint initialization method to be used to create an endpoint
@@ -148,6 +155,24 @@ func NewEndpointWithTTL(dnsName, recordType string, ttl TTL, targets ...string) 
 		RecordType: recordType,
 		Labels:     NewLabels(),
 		RecordTTL:  ttl,
+	}
+}
+
+// NewEndpointWithZone initialization method to be used to create an endpoint with a TTL struct
+func NewEndpointWithZone(dnsName, recordType string, ttl TTL, zoneID, recordsetID string, targets ...string) *Endpoint {
+	cleanTargets := make([]string, len(targets))
+	for idx, target := range targets {
+		cleanTargets[idx] = strings.TrimSuffix(target, ".")
+	}
+
+	return &Endpoint{
+		DNSName:     strings.TrimSuffix(dnsName, "."),
+		Targets:     cleanTargets,
+		RecordType:  recordType,
+		Labels:      NewLabels(),
+		RecordTTL:   ttl,
+		ZoneID:      zoneID,
+		RecordsetID: recordsetID,
 	}
 }
 

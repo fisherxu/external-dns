@@ -63,6 +63,7 @@ type Config struct {
 	AzureConfigFile          string
 	AzureResourceGroup       string
 	CloudflareProxied        bool
+	HuaweiCloudConfigFile    string
 	InfobloxGridHost         string
 	InfobloxWapiPort         int
 	InfobloxWapiUsername     string
@@ -126,6 +127,7 @@ var defaultConfig = &Config{
 	AzureConfigFile:          "/etc/kubernetes/azure.json",
 	AzureResourceGroup:       "",
 	CloudflareProxied:        false,
+	HuaweiCloudConfigFile:    "/etc/kubernetes/huawei.json",
 	InfobloxGridHost:         "",
 	InfobloxWapiPort:         443,
 	InfobloxWapiUsername:     "admin",
@@ -232,6 +234,7 @@ func (cfg *Config) ParseFlags(args []string) error {
 	app.Flag("azure-config-file", "When using the Azure provider, specify the Azure configuration file (required when --provider=azure").Default(defaultConfig.AzureConfigFile).StringVar(&cfg.AzureConfigFile)
 	app.Flag("azure-resource-group", "When using the Azure provider, override the Azure resource group to use (optional)").Default(defaultConfig.AzureResourceGroup).StringVar(&cfg.AzureResourceGroup)
 	app.Flag("cloudflare-proxied", "When using the Cloudflare provider, specify if the proxy mode must be enabled (default: disabled)").BoolVar(&cfg.CloudflareProxied)
+	app.Flag("huawei-config-file", "When using the Huawei Cloud provider, specify the Huawei Cloud configuration file (required when --provider=huaweicloud").Default(defaultConfig.HuaweiCloudConfigFile).StringVar(&cfg.HuaweiCloudConfigFile)
 	app.Flag("infoblox-grid-host", "When using the Infoblox provider, specify the Grid Manager host (required when --provider=infoblox)").Default(defaultConfig.InfobloxGridHost).StringVar(&cfg.InfobloxGridHost)
 	app.Flag("infoblox-wapi-port", "When using the Infoblox provider, specify the WAPI port (default: 443)").Default(strconv.Itoa(defaultConfig.InfobloxWapiPort)).IntVar(&cfg.InfobloxWapiPort)
 	app.Flag("infoblox-wapi-username", "When using the Infoblox provider, specify the WAPI username (default: admin)").Default(defaultConfig.InfobloxWapiUsername).StringVar(&cfg.InfobloxWapiUsername)
