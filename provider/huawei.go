@@ -17,7 +17,6 @@ limitations under the License.
 package provider
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
