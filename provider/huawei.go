@@ -111,6 +111,7 @@ func (p *HuaweiCloudProvider) Records() ([]*endpoint.Endpoint, error) {
 func (p *HuaweiCloudProvider) ApplyChanges(changes *plan.Changes) error {
 	fmt.Println("start ApplyChangesssssssssssssssssss")
 	fmt.Println(len(changes.Create) + len(changes.Delete) + len(changes.UpdateNew))
+	fmt.Println(changes.UpdateOld)
 	if changes == nil || len(changes.Create)+len(changes.Delete)+len(changes.UpdateNew) == 0 {
 		// No op
 		return nil
