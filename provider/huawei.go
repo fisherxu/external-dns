@@ -17,6 +17,7 @@ limitations under the License.
 package provider
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -116,7 +117,10 @@ func (p *HuaweiCloudProvider) ApplyChanges(changes *plan.Changes) error {
 
 func (p *HuaweiCloudProvider) createRecords(endpoints []*endpoint.Endpoint) error {
 	for _, endpoint := range endpoints {
-		p.createRecord(endpoint)
+		err := p.createRecord(endpoint)
+		if err != nil {
+			log.Errorf("HuaweiCloudProvider CreateRecordSet %s error %v", endpoint.DNSName, err)
+		}
 	}
 	return nil
 }
@@ -129,6 +133,13 @@ func (p *HuaweiCloudProvider) createRecord(endpoint *endpoint.Endpoint) error {
 		Records: endpoint.Targets,
 	}
 
+	if endpoint.ZoneID == "" {
+		zoneID, err := p.getEndpointZoneID(endpoint)
+		if err != nil {
+			return err
+		}
+		endpoint.ZoneID = zoneID
+	}
 	_, err := recordsets.Create(p.client, endpoint.ZoneID, createOpts).Extract()
 	if err != nil {
 		return err
@@ -156,7 +167,10 @@ func (p *HuaweiCloudProvider) deleteRecord(endpoint *endpoint.Endpoint) error {
 
 func (p *HuaweiCloudProvider) updateRecords(endpoints []*endpoint.Endpoint) error {
 	for _, endpoint := range endpoints {
-		p.updateRecord(endpoint)
+		err := p.updateRecord(endpoint)
+		if err != nil {
+			log.Errorf("HuaweiCloudProvider UpdateRecordSet %s error %v", endpoint.DNSName, err)
+		}
 	}
 
 	return nil
@@ -167,12 +181,46 @@ func (p *HuaweiCloudProvider) updateRecord(endpoint *endpoint.Endpoint) error {
 		TTL:     int(endpoint.RecordTTL),
 		Records: endpoint.Targets,
 	}
+	if endpoint.ZoneID == "" || endpoint.RecordsetID == "" {
+		zoneID, recordID, err := p.getEndpointRecordID(endpoint)
+		if err != nil {
+			return err
+		}
+		endpoint.ZoneID = zoneID
+		endpoint.RecordsetID = recordID
+	}
 	_, err := recordsets.Update(p.client, endpoint.ZoneID, endpoint.RecordsetID, updateOpts).Extract()
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (p *HuaweiCloudProvider) getEndpointZoneID(endpoint *endpoint.Endpoint) (string, error) {
+	zones, err := p.zones()
+	if err != nil {
+		return "", err
+	}
+	for _, zone := range zones {
+		if strings.Contains(strings.TrimSuffix(endpoint.DNSName, "."), strings.TrimSuffix(zone.Name, ".")) {
+			return zone.ID, nil
+		}
+	}
+	return "", fmt.Errorf("don't find the zoneID of endpoint: %s", endpoint.DNSName)
+}
+
+func (p *HuaweiCloudProvider) getEndpointRecordID(endpoint *endpoint.Endpoint) (string, string, error) {
+	records, err := p.records()
+	if err != nil {
+		return "", "", err
+	}
+	for _, record := range records {
+		if record.Name == endpoint.DNSName {
+			return record.ZoneID, record.ID, nil
+		}
+	}
+	return "", "", fmt.Errorf("don't find the zoneID/recordID of endpoint: %s", endpoint.DNSName)
 }
 
 func (p *HuaweiCloudProvider) records() ([]recordsets.RecordSet, error) {
