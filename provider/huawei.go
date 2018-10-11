@@ -103,11 +103,14 @@ func (p *HuaweiCloudProvider) Records() ([]*endpoint.Endpoint, error) {
 	for _, record := range records {
 		ep := endpoint.NewEndpointWithZone(record.Name, record.Type, endpoint.TTL(record.TTL), record.ZoneID, record.ID, record.Records...)
 		endpoints = append(endpoints, ep)
+		fmt.Println(*ep)
 	}
 	return endpoints, nil
 }
 
 func (p *HuaweiCloudProvider) ApplyChanges(changes *plan.Changes) error {
+	fmt.Println("start ApplyChangesssssssssssssssssss")
+	fmt.Println(len(changes.Create) + len(changes.Delete) + len(changes.UpdateNew))
 	if changes == nil || len(changes.Create)+len(changes.Delete)+len(changes.UpdateNew) == 0 {
 		// No op
 		return nil
