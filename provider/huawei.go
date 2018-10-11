@@ -68,6 +68,7 @@ func NewHuaweiCloudProvider(configFile string, domainFilter DomainFilter, zoneID
 		return nil, fmt.Errorf("Failed to parse Alibaba Cloud config file '%s': %v", configFile, err)
 	}
 
+	fmt.Println("cfgggggggggggggg", cfg)
 	providerClient, err := getProviderClientFromIAM(cfg.Username, cfg.Password, cfg.ProjectID, cfg.IAMEndpoint)
 	if err != nil {
 		return nil, err
