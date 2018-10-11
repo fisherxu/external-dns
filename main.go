@@ -27,6 +27,7 @@ import (
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"fmt"
 	"github.com/kubernetes-incubator/external-dns/controller"
 	"github.com/kubernetes-incubator/external-dns/pkg/apis/externaldns"
 	"github.com/kubernetes-incubator/external-dns/pkg/apis/externaldns/validation"
@@ -93,13 +94,15 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Println("sourceeeeeeeeeeeeee:%v", sources)
+
 	// Combine multiple sources into a single, deduplicated source.
 	endpointsSource := source.NewDedupSource(source.NewMultiSource(sources))
 
 	domainFilter := provider.NewDomainFilter(cfg.DomainFilter)
 	zoneIDFilter := provider.NewZoneIDFilter(cfg.ZoneIDFilter)
 	zoneTypeFilter := provider.NewZoneTypeFilter(cfg.AWSZoneType)
-
+	fmt.Println("eeeeeeeeeeeeeeprovider:%v", sources)
 	var p provider.Provider
 	switch cfg.Provider {
 	case "huawei":
