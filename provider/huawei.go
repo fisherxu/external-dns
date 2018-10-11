@@ -280,7 +280,7 @@ func (p *HuaweiCloudProvider) recordsets(zoneID string) ([]recordsets.RecordSet,
 }
 
 func (p *HuaweiCloudProvider) updateProviderClient() {
-	providerClient, err := getProviderClientFromIAM(p.config.Username, p.config.Password, p.config.ProjectID, p.config.IAMEndpoint)
+	providerClient, err := getProviderClientFromIAM(p.config.Username, p.config.Password, p.config.Domainname, p.config.ProjectID, p.config.IAMEndpoint)
 	if err != nil {
 		glog.Errorf("Get Token from Huawei Cloud failed: %v", err)
 	}
