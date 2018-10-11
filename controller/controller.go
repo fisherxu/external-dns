@@ -22,6 +22,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	"fmt"
 	"github.com/kubernetes-incubator/external-dns/plan"
 	"github.com/kubernetes-incubator/external-dns/registry"
 	"github.com/kubernetes-incubator/external-dns/source"
@@ -69,13 +70,14 @@ func (c *Controller) RunOnce() error {
 		registryErrors.Inc()
 		return err
 	}
+	fmt.Println("RunOnceeeeeeeeeeRecords", records)
 
 	endpoints, err := c.Source.Endpoints()
 	if err != nil {
 		sourceErrors.Inc()
 		return err
 	}
-
+	fmt.Println("RunOnceeeeeeeeeeendpoints", endpoints)
 	plan := &plan.Plan{
 		Policies: []plan.Policy{c.Policy},
 		Current:  records,
