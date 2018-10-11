@@ -46,7 +46,7 @@ type HuaweiCloudProvider struct {
 
 type huaweiCloudConfig struct {
 	IAMEndpoint string `json:"iamEndpoint" yaml:"iamEndpoint"`
-	DNSEndpoint string `json:"dnsEndpoint" yaml:"iamEndpoint"`
+	DNSEndpoint string `json:"dnsEndpoint" yaml:"dnsEndpoint"`
 	ProjectID   string `json:"projectId" yaml:"projectId"`
 	Username    string `json:"username" yaml:"username"`
 	Password    string `json:"password" yaml:"password"`
