@@ -69,7 +69,7 @@ func NewHuaweiCloudProvider(configFile string, domainFilter DomainFilter, zoneID
 	}
 
 	fmt.Println("cfgggggggggggggg", cfg)
-	providerClient, err := getProviderClientFromIAM(cfg.Username, cfg.Password, cfg.ProjectID, cfg.IAMEndpoint)
+	providerClient, err := getProviderClientFromIAM(cfg.Username, cfg.Password, cfg.Domainname, cfg.ProjectID, cfg.IAMEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -287,12 +287,12 @@ func (p *HuaweiCloudProvider) updateProviderClient() {
 	p.client.ProviderClient = providerClient
 }
 
-func getProviderClientFromIAM(username, password, projectID, iamEndpoint string) (*gophercloud.ProviderClient, error) {
+func getProviderClientFromIAM(username, password, domainname, projectID, iamEndpoint string) (*gophercloud.ProviderClient, error) {
 	opts := gophercloud.AuthOptions{
 		IdentityEndpoint: iamEndpoint,
 		Username:         username,
 		Password:         password,
-		DomainName:       username,
+		DomainName:       domainname,
 		TenantID:         projectID,
 	}
 	glog.Infof("AuthOptions: %v", opts)
