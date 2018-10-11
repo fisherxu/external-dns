@@ -97,6 +97,7 @@ func (sc *serviceSource) Endpoints() ([]*endpoint.Endpoint, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("servicesssssssssssss1111111", services)
 	services.Items, err = sc.filterByAnnotations(services.Items)
 	if err != nil {
 		return nil, err
@@ -106,7 +107,7 @@ func (sc *serviceSource) Endpoints() ([]*endpoint.Endpoint, error) {
 	if len(sc.serviceTypeFilter) > 0 {
 		services.Items = sc.filterByServiceType(services.Items)
 	}
-
+	fmt.Println("servicesssssssssssss1111111", services)
 	// get the ip addresses of all the nodes and cache them for this run
 	nodeTargets, err := sc.extractNodeTargets()
 	if err != nil {

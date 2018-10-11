@@ -23,6 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"fmt"
+	"github.com/kubernetes-incubator/external-dns/endpoint"
 	"github.com/kubernetes-incubator/external-dns/plan"
 	"github.com/kubernetes-incubator/external-dns/registry"
 	"github.com/kubernetes-incubator/external-dns/source"
@@ -73,6 +74,13 @@ func (c *Controller) RunOnce() error {
 	fmt.Println("RunOnceeeeeeeeeeRecords", records)
 
 	endpoints, err := c.Source.Endpoints()
+	eee := &endpoint.Endpoint{
+		DNSName:    "test.xufei.com",
+		Targets:    []string{"222.222.222.222", "1.11.11.111"},
+		RecordType: "A",
+		RecordTTL:  300,
+	}
+	endpoints = append(endpoints, eee)
 	if err != nil {
 		sourceErrors.Inc()
 		return err
