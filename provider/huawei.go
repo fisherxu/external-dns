@@ -86,11 +86,14 @@ func NewHuaweiCloudProvider(configFile string, domainFilter DomainFilter, zoneID
 		zoneIDFilter: zoneIDFileter,
 	}
 
+	fmt.Println(cfg)
+
 	go wait.Forever(provider.updateProviderClient, 2*time.Hour)
 	return provider, nil
 }
 
 func (p *HuaweiCloudProvider) Records() ([]*endpoint.Endpoint, error) {
+	fmt.Println("start recordssssssssssssss")
 	records, err := p.records()
 	if err != nil {
 		return nil, err
@@ -227,7 +230,7 @@ func (p *HuaweiCloudProvider) records() ([]recordsets.RecordSet, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println("zonezzzzzzzzzzzzzz")
 	var recordset []recordsets.RecordSet
 	for _, zone := range zones {
 		if zone.Name == "" {
