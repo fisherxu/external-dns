@@ -76,7 +76,7 @@ func (c *Controller) RunOnce() error {
 	endpoints, err := c.Source.Endpoints()
 	eee := &endpoint.Endpoint{
 		DNSName:    "test.xufei.com",
-		Targets:    []string{"222.222.222.222", "1.11.11.111"},
+		Targets:    []string{"222.222.222.222", "1.11.11.111", "4.4.4.4"},
 		RecordType: "A",
 		RecordTTL:  300,
 	}
