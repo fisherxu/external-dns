@@ -223,7 +223,7 @@ func (p *HuaweiCloudProvider) getEndpointRecordID(endpoint *endpoint.Endpoint) (
 		return "", "", err
 	}
 	for _, record := range records {
-		if record.Name == endpoint.DNSName {
+		if strings.TrimSuffix(record.Name, ".") == strings.TrimSuffix(endpoint.DNSName, ".") || record.Type != "TXT" {
 			return record.ZoneID, record.ID, nil
 		}
 	}
