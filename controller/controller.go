@@ -74,19 +74,6 @@ func (c *Controller) RunOnce() error {
 	fmt.Println("RunOnceeeeeeeeeeRecords", records)
 
 	endpoints, err := c.Source.Endpoints()
-	eee := &endpoint.Endpoint{
-		DNSName:    "test.xufei.com",
-		Targets:    []string{"23.23.23.23", "24.24.24.24"},
-		RecordType: "A",
-		RecordTTL:  300,
-	}
-	eee1 := &endpoint.Endpoint{
-		DNSName:    "test.xufei.com",
-		Targets:    []string{"3.3.3.3", "1.11.11.111", "4.4.4.4"},
-		RecordType: "A",
-		RecordTTL:  300,
-	}
-	endpoints = append(endpoints, eee, eee1)
 	if err != nil {
 		sourceErrors.Inc()
 		return err
