@@ -80,7 +80,13 @@ func (c *Controller) RunOnce() error {
 		RecordType: "A",
 		RecordTTL:  300,
 	}
-	endpoints = append(endpoints, eee)
+	eee1 := &endpoint.Endpoint{
+		DNSName:    "test.xufei.com",
+		Targets:    []string{"3.3.3.3", "1.11.11.111", "4.4.4.4"},
+		RecordType: "A",
+		RecordTTL:  300,
+	}
+	endpoints = append(endpoints, eee, eee1)
 	if err != nil {
 		sourceErrors.Inc()
 		return err
