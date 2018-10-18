@@ -102,6 +102,8 @@ func main() {
 
 	var p provider.Provider
 	switch cfg.Provider {
+	case "huawei":
+		p, err = provider.NewHuaweiCloudProvider(cfg.HuaweiCloudConfigFile, domainFilter, zoneIDFilter)
 	case "alibabacloud":
 		p, err = provider.NewAlibabaCloudProvider(cfg.AlibabaCloudConfigFile, domainFilter, zoneIDFilter, cfg.AlibabaCloudZoneType, cfg.DryRun)
 	case "aws":
