@@ -338,6 +338,7 @@ type recordSet struct {
 	dnsName     string
 	recordType  string
 	zoneID      string
+	ttl         int
 	recordSetID string
 	names       map[string]bool
 }
@@ -351,15 +352,16 @@ func addEndpoint(ep *endpoint.Endpoint, recordSets map[string]*recordSet, delete
 			dnsName:    canonicalizeDomainName(ep.DNSName),
 			recordType: ep.RecordType,
 			names:      make(map[string]bool),
+			ttl:        int(ep.RecordTTL),
 		}
 	}
 	if rs.zoneID == "" {
-		rs.zoneID = ep.Labels[designateZoneID]
+		rs.zoneID = ep.Labels[ZoneID]
 	}
 	if rs.recordSetID == "" {
-		rs.recordSetID = ep.Labels[designateRecordSetID]
+		rs.recordSetID = ep.Labels[RecordSetID]
 	}
-	for _, rec := range strings.Split(ep.Labels[designateOriginalRecords], "\000") {
+	for _, rec := range strings.Split(ep.Labels[OriginalRecords], "\000") {
 		if _, ok := rs.names[rec]; !ok && rec != "" {
 			rs.names[rec] = true
 		}
