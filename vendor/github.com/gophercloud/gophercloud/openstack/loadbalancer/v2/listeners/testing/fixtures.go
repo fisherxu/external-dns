@@ -16,7 +16,7 @@ const ListenersListBody = `
 	"listeners":[
 		{
 			"id": "db902c0c-d5ff-4753-b465-668ad9656918",
-			"tenant_id": "310df60f-2a10-4ee5-9554-98393092194c",
+			"project_id": "310df60f-2a10-4ee5-9554-98393092194c",
 			"name": "web",
 			"description": "listener config for the web tier",
 			"loadbalancers": [{"id": "53306cda-815d-4354-9444-59e09da9c3c5"}],
@@ -29,7 +29,7 @@ const ListenersListBody = `
 		},
 		{
 			"id": "36e08a3e-a78f-4b40-a229-1e7e23eee1ab",
-			"tenant_id": "310df60f-2a10-4ee5-9554-98393092194c",
+			"project_id": "310df60f-2a10-4ee5-9554-98393092194c",
 			"name": "db",
 			"description": "listener config for the db tier",
 			"loadbalancers": [{"id": "79e05663-7f03-45d2-a092-8b94062f22ab"}],
@@ -50,7 +50,7 @@ const SingleListenerBody = `
 {
 	"listener": {
 		"id": "36e08a3e-a78f-4b40-a229-1e7e23eee1ab",
-		"tenant_id": "310df60f-2a10-4ee5-9554-98393092194c",
+		"project_id": "310df60f-2a10-4ee5-9554-98393092194c",
 		"name": "db",
 		"description": "listener config for the db tier",
 		"loadbalancers": [{"id": "79e05663-7f03-45d2-a092-8b94062f22ab"}],
@@ -70,7 +70,7 @@ const PostUpdateListenerBody = `
 {
 	"listener": {
 		"id": "36e08a3e-a78f-4b40-a229-1e7e23eee1ab",
-		"tenant_id": "310df60f-2a10-4ee5-9554-98393092194c",
+		"project_id": "310df60f-2a10-4ee5-9554-98393092194c",
 		"name": "NewListenerName",
 		"description": "listener config for the db tier",
 		"loadbalancers": [{"id": "79e05663-7f03-45d2-a092-8b94062f22ab"}],
@@ -85,10 +85,23 @@ const PostUpdateListenerBody = `
 }
 `
 
+// GetListenerStatsBody is the canned request body of a Get request on listener's statistics.
+const GetListenerStatsBody = `
+{
+    "stats": {
+        "active_connections": 0,
+        "bytes_in": 9532,
+        "bytes_out": 22033,
+        "request_errors": 46,
+        "total_connections": 112
+    }
+}
+`
+
 var (
 	ListenerWeb = listeners.Listener{
 		ID:                     "db902c0c-d5ff-4753-b465-668ad9656918",
-		TenantID:               "310df60f-2a10-4ee5-9554-98393092194c",
+		ProjectID:              "310df60f-2a10-4ee5-9554-98393092194c",
 		Name:                   "web",
 		Description:            "listener config for the web tier",
 		Loadbalancers:          []listeners.LoadBalancerID{{ID: "53306cda-815d-4354-9444-59e09da9c3c5"}},
@@ -101,7 +114,7 @@ var (
 	}
 	ListenerDb = listeners.Listener{
 		ID:                     "36e08a3e-a78f-4b40-a229-1e7e23eee1ab",
-		TenantID:               "310df60f-2a10-4ee5-9554-98393092194c",
+		ProjectID:              "310df60f-2a10-4ee5-9554-98393092194c",
 		Name:                   "db",
 		Description:            "listener config for the db tier",
 		Loadbalancers:          []listeners.LoadBalancerID{{ID: "79e05663-7f03-45d2-a092-8b94062f22ab"}},
@@ -115,7 +128,7 @@ var (
 	}
 	ListenerUpdated = listeners.Listener{
 		ID:                     "36e08a3e-a78f-4b40-a229-1e7e23eee1ab",
-		TenantID:               "310df60f-2a10-4ee5-9554-98393092194c",
+		ProjectID:              "310df60f-2a10-4ee5-9554-98393092194c",
 		Name:                   "NewListenerName",
 		Description:            "listener config for the db tier",
 		Loadbalancers:          []listeners.LoadBalancerID{{ID: "79e05663-7f03-45d2-a092-8b94062f22ab"}},
@@ -126,6 +139,13 @@ var (
 		AdminStateUp:           true,
 		DefaultTlsContainerRef: "2c433435-20de-4411-84ae-9cc8917def76",
 		SniContainerRefs:       []string{"3d328d82-2547-4921-ac2f-61c3b452b5ff", "b3cfd7e3-8c19-455c-8ebb-d78dfd8f7e7d"},
+	}
+	ListenerStatsTree = listeners.Stats{
+		ActiveConnections: 0,
+		BytesIn:           9532,
+		BytesOut:          22033,
+		RequestErrors:     46,
+		TotalConnections:  112,
 	}
 )
 
@@ -209,5 +229,16 @@ func HandleListenerUpdateSuccessfully(t *testing.T) {
 		}`)
 
 		fmt.Fprintf(w, PostUpdateListenerBody)
+	})
+}
+
+// HandleListenerGetStatsTree sets up the test server to respond to a listener Get stats tree request.
+func HandleListenerGetStatsTree(t *testing.T) {
+	th.Mux.HandleFunc("/v2.0/lbaas/listeners/4ec89087-d057-4e2c-911f-60a3b47ee304/stats", func(w http.ResponseWriter, r *http.Request) {
+		th.TestMethod(t, r, "GET")
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
+		th.TestHeader(t, r, "Accept", "application/json")
+
+		fmt.Fprintf(w, GetListenerStatsBody)
 	})
 }

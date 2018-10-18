@@ -1,6 +1,10 @@
 package users
 
 import (
+	"net/http"
+	"net/url"
+	"strings"
+
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/groups"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
@@ -47,11 +51,30 @@ type ListOpts struct {
 
 	// UniqueID filters the response by unique ID.
 	UniqueID string `q:"unique_id"`
+
+	// Filters filters the response by custom filters such as
+	// 'name__contains=foo'
+	Filters map[string]string `q:"-"`
 }
 
 // ToUserListQuery formats a ListOpts into a query string.
 func (opts ListOpts) ToUserListQuery() (string, error) {
 	q, err := gophercloud.BuildQueryString(opts)
+	if err != nil {
+		return "", err
+	}
+
+	params := q.Query()
+	for k, v := range opts.Filters {
+		i := strings.Index(k, "__")
+		if i > 0 && i < len(k)-2 {
+			params.Add(k, v)
+		} else {
+			return "", InvalidListFilter{FilterName: k}
+		}
+	}
+
+	q = &url.URL{RawQuery: params.Encode()}
 	return q.String(), err
 }
 
@@ -263,6 +286,22 @@ func AddToGroup(client *gophercloud.ServiceClient, groupID, userID string) (r Ad
 	_, r.Err = client.Put(url, nil, nil, &gophercloud.RequestOpts{
 		OkCodes: []int{204},
 	})
+	return
+}
+
+// IsMemberOfGroup checks whether a user belongs to a group.
+func IsMemberOfGroup(client *gophercloud.ServiceClient, groupID, userID string) (r IsMemberOfGroupResult) {
+	url := isMemberOfGroupURL(client, groupID, userID)
+	var response *http.Response
+	response, r.Err = client.Head(url, &gophercloud.RequestOpts{
+		OkCodes: []int{204, 404},
+	})
+	if r.Err == nil && response != nil {
+		if (*response).StatusCode == 204 {
+			r.isMember = true
+		}
+	}
+
 	return
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -90,6 +91,9 @@ func TestConcurrentReauth(t *testing.T) {
 
 	wg := new(sync.WaitGroup)
 	reqopts := new(gophercloud.RequestOpts)
+	reqopts.MoreHeaders = map[string]string{
+		"X-Auth-Token": prereauthTok,
+	}
 
 	for i := 0; i < numconc; i++ {
 		wg.Add(1)
@@ -118,4 +122,35 @@ func TestConcurrentReauth(t *testing.T) {
 	wg.Wait()
 
 	th.AssertEquals(t, 1, info.numreauths)
+}
+
+func TestReauthEndLoop(t *testing.T) {
+
+	p := new(gophercloud.ProviderClient)
+	p.UseTokenLock()
+	p.SetToken(client.TokenID)
+	p.ReauthFunc = func() error {
+		// Reauth func is working and returns no error
+		return nil
+	}
+
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+
+	th.Mux.HandleFunc("/route", func(w http.ResponseWriter, r *http.Request) {
+		// route always return 401
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	})
+
+	reqopts := new(gophercloud.RequestOpts)
+	_, err := p.Request("GET", fmt.Sprintf("%s/route", th.Endpoint()), reqopts)
+	if err == nil {
+		t.Errorf("request ends with a nil error")
+		return
+	}
+
+	if reflect.TypeOf(err) != reflect.TypeOf(&gophercloud.ErrErrorAfterReauthentication{}) {
+		t.Errorf("error is not an ErrErrorAfterReauthentication")
+	}
 }

@@ -18,7 +18,7 @@ type LoadBalancer struct {
 	AdminStateUp bool `json:"admin_state_up"`
 
 	// Owner of the LoadBalancer.
-	TenantID string `json:"tenant_id"`
+	ProjectID string `json:"project_id"`
 
 	// The provisioning status of the LoadBalancer.
 	// This value is ACTIVE, PENDING_CREATE or ERROR.
@@ -56,6 +56,23 @@ type LoadBalancer struct {
 // StatusTree represents the status of a loadbalancer.
 type StatusTree struct {
 	Loadbalancer *LoadBalancer `json:"loadbalancer"`
+}
+
+type Stats struct {
+	// The currently active connections.
+	ActiveConnections int `json:"active_connections"`
+
+	// The total bytes received.
+	BytesIn int `json:"bytes_in"`
+
+	// The total bytes sent.
+	BytesOut int `json:"bytes_out"`
+
+	// The total requests that were unable to be fulfilled.
+	RequestErrors int `json:"request_errors"`
+
+	// The total connections handled.
+	TotalConnections int `json:"total_connections"`
 }
 
 // LoadBalancerPage is the page returned by a pager when traversing over a
@@ -124,6 +141,22 @@ func (r GetStatusesResult) Extract() (*StatusTree, error) {
 	return s.Statuses, err
 }
 
+// StatsResult represents the result of a GetStats operation.
+// Call its Extract method to interpret it as a Stats.
+type StatsResult struct {
+	gophercloud.Result
+}
+
+// Extract is a function that accepts a result and extracts the status of
+// a Loadbalancer.
+func (r StatsResult) Extract() (*Stats, error) {
+	var s struct {
+		Stats *Stats `json:"stats"`
+	}
+	err := r.ExtractInto(&s)
+	return s.Stats, err
+}
+
 // CreateResult represents the result of a create operation. Call its Extract
 // method to interpret it as a LoadBalancer.
 type CreateResult struct {
@@ -145,5 +178,11 @@ type UpdateResult struct {
 // DeleteResult represents the result of a delete operation. Call its
 // ExtractErr method to determine if the request succeeded or failed.
 type DeleteResult struct {
+	gophercloud.ErrResult
+}
+
+// FailoverResult represents the result of a failover operation. Call its
+// ExtractErr method to determine if the request succeeded or failed.
+type FailoverResult struct {
 	gophercloud.ErrResult
 }

@@ -81,15 +81,15 @@ func TestRequiredCreateOpts(t *testing.T) {
 	if res.Err == nil {
 		t.Fatalf("Expected error, got none")
 	}
-	res = listeners.Create(fake.ServiceClient(), listeners.CreateOpts{Name: "foo", TenantID: "bar"})
+	res = listeners.Create(fake.ServiceClient(), listeners.CreateOpts{Name: "foo", ProjectID: "bar"})
 	if res.Err == nil {
 		t.Fatalf("Expected error, got none")
 	}
-	res = listeners.Create(fake.ServiceClient(), listeners.CreateOpts{Name: "foo", TenantID: "bar", Protocol: "bar"})
+	res = listeners.Create(fake.ServiceClient(), listeners.CreateOpts{Name: "foo", ProjectID: "bar", Protocol: "bar"})
 	if res.Err == nil {
 		t.Fatalf("Expected error, got none")
 	}
-	res = listeners.Create(fake.ServiceClient(), listeners.CreateOpts{Name: "foo", TenantID: "bar", Protocol: "bar", ProtocolPort: 80})
+	res = listeners.Create(fake.ServiceClient(), listeners.CreateOpts{Name: "foo", ProjectID: "bar", Protocol: "bar", ProtocolPort: 80})
 	if res.Err == nil {
 		t.Fatalf("Expected error, got none")
 	}
@@ -134,4 +134,18 @@ func TestUpdateListener(t *testing.T) {
 	}
 
 	th.CheckDeepEquals(t, ListenerUpdated, *actual)
+}
+
+func TestGetListenerStatsTree(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleListenerGetStatsTree(t)
+
+	client := fake.ServiceClient()
+	actual, err := listeners.GetStats(client, "4ec89087-d057-4e2c-911f-60a3b47ee304").Extract()
+	if err != nil {
+		t.Fatalf("Unexpected Get error: %v", err)
+	}
+
+	th.CheckDeepEquals(t, ListenerStatsTree, *actual)
 }

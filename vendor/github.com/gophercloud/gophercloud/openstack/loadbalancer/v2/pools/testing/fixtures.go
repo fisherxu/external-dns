@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
 	th "github.com/gophercloud/gophercloud/testhelper"
@@ -25,7 +26,7 @@ const PoolsListBody = `
 			"id":"72741b06-df4d-4715-b142-276b6bce75ab",
 			"name":"web",
 			"admin_state_up":true,
-			"tenant_id":"83657cfcdfe44cd5920adaf26c48ceea",
+			"project_id":"83657cfcdfe44cd5920adaf26c48ceea",
 			"provider": "haproxy"
 		},
 		{
@@ -39,7 +40,7 @@ const PoolsListBody = `
 			"id":"c3741b06-df4d-4715-b142-276b6bce75ab",
 			"name":"db",
 			"admin_state_up":true,
-			"tenant_id":"83657cfcdfe44cd5920adaf26c48ceea",
+			"project_id":"83657cfcdfe44cd5920adaf26c48ceea",
 			"provider": "haproxy"
 		}
 	]
@@ -60,7 +61,7 @@ const SinglePoolBody = `
 		"id":"c3741b06-df4d-4715-b142-276b6bce75ab",
 		"name":"db",
 		"admin_state_up":true,
-		"tenant_id":"83657cfcdfe44cd5920adaf26c48ceea",
+		"project_id":"83657cfcdfe44cd5920adaf26c48ceea",
 		"provider": "haproxy"
 	}
 }
@@ -80,7 +81,7 @@ const PostUpdatePoolBody = `
 		"id":"c3741b06-df4d-4715-b142-276b6bce75ab",
 		"name":"db",
 		"admin_state_up":true,
-		"tenant_id":"83657cfcdfe44cd5920adaf26c48ceea",
+		"project_id":"83657cfcdfe44cd5920adaf26c48ceea",
 		"provider": "haproxy"
 	}
 }
@@ -92,7 +93,7 @@ var (
 		Protocol:      "HTTP",
 		Description:   "",
 		MonitorID:     "466c8345-28d8-4f84-a246-e04380b0461d",
-		TenantID:      "83657cfcdfe44cd5920adaf26c48ceea",
+		ProjectID:     "83657cfcdfe44cd5920adaf26c48ceea",
 		AdminStateUp:  true,
 		Name:          "web",
 		Members:       []pools.Member{{ID: "53306cda-815d-4354-9fe4-59e09da9c3c5"}},
@@ -106,7 +107,7 @@ var (
 		Protocol:      "HTTP",
 		Description:   "",
 		MonitorID:     "5f6c8345-28d8-4f84-a246-e04380b0461d",
-		TenantID:      "83657cfcdfe44cd5920adaf26c48ceea",
+		ProjectID:     "83657cfcdfe44cd5920adaf26c48ceea",
 		AdminStateUp:  true,
 		Name:          "db",
 		Members:       []pools.Member{{ID: "67306cda-815d-4354-9fe4-59e09da9c3c5"}},
@@ -120,7 +121,7 @@ var (
 		Protocol:      "HTTP",
 		Description:   "",
 		MonitorID:     "5f6c8345-28d8-4f84-a246-e04380b0461d",
-		TenantID:      "83657cfcdfe44cd5920adaf26c48ceea",
+		ProjectID:     "83657cfcdfe44cd5920adaf26c48ceea",
 		AdminStateUp:  true,
 		Name:          "db",
 		Members:       []pools.Member{{ID: "67306cda-815d-4354-9fe4-59e09da9c3c5"}},
@@ -162,7 +163,7 @@ func HandlePoolCreationSuccessfully(t *testing.T, response string) {
 			        "lb_algorithm": "ROUND_ROBIN",
 			        "protocol": "HTTP",
 			        "name": "Example pool",
-			        "tenant_id": "2ffc6e22aae24e4795f87155d24c896f",
+			        "project_id": "2ffc6e22aae24e4795f87155d24c896f",
 			        "loadbalancer_id": "79e05663-7f03-45d2-a092-8b94062f22ab"
 			}
 		}`)
@@ -222,7 +223,7 @@ const MembersListBody = `
 			"weight": 5,
 			"name": "web",
 			"subnet_id": "1981f108-3c48-48d2-b908-30f7d28532c9",
-			"tenant_id": "2ffc6e22aae24e4795f87155d24c896f",
+			"project_id": "2ffc6e22aae24e4795f87155d24c896f",
 			"admin_state_up":true,
 			"protocol_port": 80
 		},
@@ -232,9 +233,16 @@ const MembersListBody = `
 			"weight": 10,
 			"name": "db",
 			"subnet_id": "1981f108-3c48-48d2-b908-30f7d28532c9",
-			"tenant_id": "2ffc6e22aae24e4795f87155d24c896f",
+			"project_id": "2ffc6e22aae24e4795f87155d24c896f",
 			"admin_state_up":false,
-			"protocol_port": 80
+			"protocol_port": 80,
+			"provisioning_status": "ACTIVE",
+			"created_at": "2018-08-23T20:05:21",
+			"updated_at": "2018-08-23T21:22:53",
+			"operating_status": "ONLINE",
+			"backup": false,
+			"monitor_address": "192.168.1.111",
+			"monitor_port": 80
 		}
 	]
 }
@@ -249,9 +257,16 @@ const SingleMemberBody = `
 		"weight": 10,
 		"name": "db",
 		"subnet_id": "1981f108-3c48-48d2-b908-30f7d28532c9",
-		"tenant_id": "2ffc6e22aae24e4795f87155d24c896f",
+		"project_id": "2ffc6e22aae24e4795f87155d24c896f",
 		"admin_state_up":false,
-		"protocol_port": 80
+		"protocol_port": 80,
+		"provisioning_status": "ACTIVE",
+		"created_at": "2018-08-23T20:05:21",
+		"updated_at": "2018-08-23T21:22:53",
+		"operating_status": "ONLINE",
+		"backup": false,
+		"monitor_address": "192.168.1.111",
+		"monitor_port": 80
 	}
 }
 `
@@ -265,7 +280,7 @@ const PostUpdateMemberBody = `
 		"weight": 10,
 		"name": "db",
 		"subnet_id": "1981f108-3c48-48d2-b908-30f7d28532c9",
-		"tenant_id": "2ffc6e22aae24e4795f87155d24c896f",
+		"project_id": "2ffc6e22aae24e4795f87155d24c896f",
 		"admin_state_up":false,
 		"protocol_port": 80
 	}
@@ -275,7 +290,7 @@ const PostUpdateMemberBody = `
 var (
 	MemberWeb = pools.Member{
 		SubnetID:     "1981f108-3c48-48d2-b908-30f7d28532c9",
-		TenantID:     "2ffc6e22aae24e4795f87155d24c896f",
+		ProjectID:    "2ffc6e22aae24e4795f87155d24c896f",
 		AdminStateUp: true,
 		Name:         "web",
 		ID:           "2a280670-c202-4b0b-a562-34077415aabf",
@@ -284,18 +299,25 @@ var (
 		ProtocolPort: 80,
 	}
 	MemberDb = pools.Member{
-		SubnetID:     "1981f108-3c48-48d2-b908-30f7d28532c9",
-		TenantID:     "2ffc6e22aae24e4795f87155d24c896f",
-		AdminStateUp: false,
-		Name:         "db",
-		ID:           "fad389a3-9a4a-4762-a365-8c7038508b5d",
-		Address:      "10.0.2.11",
-		Weight:       10,
-		ProtocolPort: 80,
+		SubnetID:           "1981f108-3c48-48d2-b908-30f7d28532c9",
+		ProjectID:          "2ffc6e22aae24e4795f87155d24c896f",
+		AdminStateUp:       false,
+		Name:               "db",
+		ID:                 "fad389a3-9a4a-4762-a365-8c7038508b5d",
+		Address:            "10.0.2.11",
+		Weight:             10,
+		ProtocolPort:       80,
+		ProvisioningStatus: "ACTIVE",
+		CreatedAt:          time.Date(2018, 8, 23, 20, 05, 21, 0, time.UTC),
+		UpdatedAt:          time.Date(2018, 8, 23, 21, 22, 53, 0, time.UTC),
+		OperatingStatus:    "ONLINE",
+		Backup:             false,
+		MonitorAddress:     "192.168.1.111",
+		MonitorPort:        80,
 	}
 	MemberUpdated = pools.Member{
 		SubnetID:     "1981f108-3c48-48d2-b908-30f7d28532c9",
-		TenantID:     "2ffc6e22aae24e4795f87155d24c896f",
+		ProjectID:    "2ffc6e22aae24e4795f87155d24c896f",
 		AdminStateUp: false,
 		Name:         "db",
 		ID:           "fad389a3-9a4a-4762-a365-8c7038508b5d",
@@ -337,7 +359,7 @@ func HandleMemberCreationSuccessfully(t *testing.T, response string) {
 			        "weight": 10,
 			        "name": "db",
 			        "subnet_id": "1981f108-3c48-48d2-b908-30f7d28532c9",
-			        "tenant_id": "2ffc6e22aae24e4795f87155d24c896f",
+			        "project_id": "2ffc6e22aae24e4795f87155d24c896f",
 			        "protocol_port": 80
 			}
 		}`)
@@ -384,5 +406,35 @@ func HandleMemberUpdateSuccessfully(t *testing.T) {
 		}`)
 
 		fmt.Fprintf(w, PostUpdateMemberBody)
+	})
+}
+
+// HandleMembersUpdateSuccessfully sets up the test server to respond to a batch member Update request.
+func HandleMembersUpdateSuccessfully(t *testing.T) {
+	th.Mux.HandleFunc("/v2.0/lbaas/pools/332abe93-f488-41ba-870b-2ac66be7f853/members", func(w http.ResponseWriter, r *http.Request) {
+		th.TestMethod(t, r, "PUT")
+		th.TestHeader(t, r, "X-Auth-Token", client.TokenID)
+		th.TestHeader(t, r, "Accept", "application/json")
+		th.TestHeader(t, r, "Content-Type", "application/json")
+		th.TestJSONRequest(t, r, `{
+			"members": [
+				{
+					"name": "web-server-1",
+					"weight": 20,
+					"subnet_id": "bbb35f84-35cc-4b2f-84c2-a6a29bba68aa",
+					"address": "192.0.2.16",
+					"protocol_port": 80
+				},
+				{
+					"name": "web-server-2",
+					"weight": 10,
+					"subnet_id": "bbb35f84-35cc-4b2f-84c2-a6a29bba68aa",
+					"address": "192.0.2.17",
+					"protocol_port": 80
+				}
+			]
+		}`)
+
+		w.WriteHeader(http.StatusAccepted)
 	})
 }

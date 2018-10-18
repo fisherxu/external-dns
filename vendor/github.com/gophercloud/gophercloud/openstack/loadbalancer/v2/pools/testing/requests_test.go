@@ -61,7 +61,7 @@ func TestCreatePool(t *testing.T) {
 		LBMethod:       pools.LBMethodRoundRobin,
 		Protocol:       "HTTP",
 		Name:           "Example pool",
-		TenantID:       "2ffc6e22aae24e4795f87155d24c896f",
+		ProjectID:      "2ffc6e22aae24e4795f87155d24c896f",
 		LoadbalancerID: "79e05663-7f03-45d2-a092-8b94062f22ab",
 	}).Extract()
 	th.AssertNoErr(t, err)
@@ -192,7 +192,7 @@ func TestCreateMember(t *testing.T) {
 	actual, err := pools.CreateMember(fake.ServiceClient(), "332abe93-f488-41ba-870b-2ac66be7f853", pools.CreateMemberOpts{
 		Name:         "db",
 		SubnetID:     "1981f108-3c48-48d2-b908-30f7d28532c9",
-		TenantID:     "2ffc6e22aae24e4795f87155d24c896f",
+		ProjectID:    "2ffc6e22aae24e4795f87155d24c896f",
 		Address:      "10.0.2.11",
 		ProtocolPort: 80,
 		Weight:       10,
@@ -259,4 +259,63 @@ func TestUpdateMember(t *testing.T) {
 	}
 
 	th.CheckDeepEquals(t, MemberUpdated, *actual)
+}
+
+func TestBatchUpdateMembers(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+	HandleMembersUpdateSuccessfully(t)
+
+	member1 := pools.BatchUpdateMemberOpts{
+		Address:      "192.0.2.16",
+		ProtocolPort: 80,
+		Name:         "web-server-1",
+		SubnetID:     "bbb35f84-35cc-4b2f-84c2-a6a29bba68aa",
+		Weight:       20,
+	}
+	member2 := pools.BatchUpdateMemberOpts{
+		Address:      "192.0.2.17",
+		ProtocolPort: 80,
+		Name:         "web-server-2",
+		Weight:       10,
+		SubnetID:     "bbb35f84-35cc-4b2f-84c2-a6a29bba68aa",
+	}
+	members := []pools.BatchUpdateMemberOpts{member1, member2}
+
+	res := pools.BatchUpdateMembers(fake.ServiceClient(), "332abe93-f488-41ba-870b-2ac66be7f853", members)
+	th.AssertNoErr(t, res.Err)
+}
+
+func TestRequiredBatchUpdateMemberOpts(t *testing.T) {
+	th.SetupHTTP()
+	defer th.TeardownHTTP()
+
+	res := pools.BatchUpdateMembers(fake.ServiceClient(), "332abe93-f488-41ba-870b-2ac66be7f853", []pools.BatchUpdateMemberOpts{
+		{
+			Name: "web-server-1",
+		},
+	})
+	if res.Err == nil {
+		t.Fatalf("Expected error, but got none")
+	}
+
+	res = pools.BatchUpdateMembers(fake.ServiceClient(), "332abe93-f488-41ba-870b-2ac66be7f853", []pools.BatchUpdateMemberOpts{
+		{
+			Address: "192.0.2.17",
+			Name:    "web-server-1",
+		},
+	})
+	if res.Err == nil {
+		t.Fatalf("Expected error, but got none")
+	}
+
+	res = pools.BatchUpdateMembers(fake.ServiceClient(), "332abe93-f488-41ba-870b-2ac66be7f853", []pools.BatchUpdateMemberOpts{
+		{
+			ProtocolPort: 80,
+			Name:         "web-server-1",
+		},
+	})
+	if res.Err == nil {
+		t.Fatalf("Expected error, but got none")
+	}
 }

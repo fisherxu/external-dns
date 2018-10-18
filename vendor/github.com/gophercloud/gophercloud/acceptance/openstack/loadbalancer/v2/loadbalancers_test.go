@@ -8,6 +8,7 @@ import (
 	"github.com/gophercloud/gophercloud/acceptance/clients"
 	networking "github.com/gophercloud/gophercloud/acceptance/openstack/networking/v2"
 	"github.com/gophercloud/gophercloud/acceptance/tools"
+	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/l7policies"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/listeners"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/loadbalancers"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/monitors"
@@ -71,6 +72,13 @@ func TestLoadbalancersCRUD(t *testing.T) {
 
 	tools.PrintResource(t, newLB)
 
+	lbStats, err := loadbalancers.GetStats(lbClient, lb.ID).Extract()
+	if err != nil {
+		t.Fatalf("Unable to get loadbalancer's statistics: %v", err)
+	}
+
+	tools.PrintResource(t, lbStats)
+
 	// Because of the time it takes to create a loadbalancer,
 	// this test will include some other resources.
 
@@ -100,11 +108,79 @@ func TestLoadbalancersCRUD(t *testing.T) {
 
 	tools.PrintResource(t, newListener)
 
+	listenerStats, err := listeners.GetStats(lbClient, listener.ID).Extract()
+	if err != nil {
+		t.Fatalf("Unable to get listener's statistics: %v", err)
+	}
+
+	tools.PrintResource(t, listenerStats)
+
 	// L7 policy
-	_, err = CreateL7Policy(t, lbClient, listener, lb)
+	policy, err := CreateL7Policy(t, lbClient, listener, lb)
 	if err != nil {
 		t.Fatalf("Unable to create l7 policy: %v", err)
 	}
+	defer DeleteL7Policy(t, lbClient, lb.ID, policy.ID)
+
+	newDescription := "New l7 policy description"
+	updateL7policyOpts := l7policies.UpdateOpts{
+		Description: &newDescription,
+	}
+	_, err = l7policies.Update(lbClient, policy.ID, updateL7policyOpts).Extract()
+	if err != nil {
+		t.Fatalf("Unable to update l7 policy")
+	}
+
+	if err := WaitForLoadBalancerState(lbClient, lb.ID, "ACTIVE", loadbalancerActiveTimeoutSeconds); err != nil {
+		t.Fatalf("Timed out waiting for loadbalancer to become active")
+	}
+
+	newPolicy, err := l7policies.Get(lbClient, policy.ID).Extract()
+	if err != nil {
+		t.Fatalf("Unable to get l7 policy: %v", err)
+	}
+
+	tools.PrintResource(t, newPolicy)
+
+	// L7 rule
+	rule, err := CreateL7Rule(t, lbClient, newPolicy.ID, lb)
+	if err != nil {
+		t.Fatalf("Unable to create l7 rule: %v", err)
+	}
+	defer DeleteL7Rule(t, lbClient, lb.ID, policy.ID, rule.ID)
+
+	allPages, err := l7policies.ListRules(lbClient, policy.ID, l7policies.ListRulesOpts{}).AllPages()
+	if err != nil {
+		t.Fatalf("Unable to get l7 rules: %v", err)
+	}
+	allRules, err := l7policies.ExtractRules(allPages)
+	if err != nil {
+		t.Fatalf("Unable to extract l7 rules: %v", err)
+	}
+	for _, rule := range allRules {
+		tools.PrintResource(t, rule)
+	}
+
+	updateL7ruleOpts := l7policies.UpdateRuleOpts{
+		RuleType:    l7policies.TypePath,
+		CompareType: l7policies.CompareTypeRegex,
+		Value:       "/images/special*",
+	}
+	_, err = l7policies.UpdateRule(lbClient, policy.ID, rule.ID, updateL7ruleOpts).Extract()
+	if err != nil {
+		t.Fatalf("Unable to update l7 rule: %v", err)
+	}
+
+	if err := WaitForLoadBalancerState(lbClient, lb.ID, "ACTIVE", loadbalancerActiveTimeoutSeconds); err != nil {
+		t.Fatalf("Timed out waiting for loadbalancer to become active")
+	}
+
+	newRule, err := l7policies.GetRule(lbClient, newPolicy.ID, rule.ID).Extract()
+	if err != nil {
+		t.Fatalf("Unable to get l7 rule: %v", err)
+	}
+
+	tools.PrintResource(t, newRule)
 
 	// Pool
 	pool, err := CreatePool(t, lbClient, lb)
@@ -153,6 +229,28 @@ func TestLoadbalancersCRUD(t *testing.T) {
 	}
 
 	newMember, err := pools.GetMember(lbClient, pool.ID, member.ID).Extract()
+	if err != nil {
+		t.Fatalf("Unable to get member")
+	}
+
+	tools.PrintResource(t, newMember)
+
+	newWeight = tools.RandomInt(11, 100)
+	memberOpts := pools.BatchUpdateMemberOpts{
+		Address:      member.Address,
+		ProtocolPort: member.ProtocolPort,
+		Weight:       newWeight,
+	}
+	batchMembers := []pools.BatchUpdateMemberOpts{memberOpts}
+	if err := pools.BatchUpdateMembers(lbClient, pool.ID, batchMembers).ExtractErr(); err != nil {
+		t.Fatalf("Unable to batch update members")
+	}
+
+	if err := WaitForLoadBalancerState(lbClient, lb.ID, "ACTIVE", loadbalancerActiveTimeoutSeconds); err != nil {
+		t.Fatalf("Timed out waiting for loadbalancer to become active")
+	}
+
+	newMember, err = pools.GetMember(lbClient, pool.ID, member.ID).Extract()
 	if err != nil {
 		t.Fatalf("Unable to get member")
 	}
