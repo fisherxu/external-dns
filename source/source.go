@@ -50,7 +50,7 @@ type Source interface {
 }
 
 func getTTLFromAnnotations(annotations map[string]string) (endpoint.TTL, error) {
-	ttlNotConfigured := endpoint.TTL(0)
+	ttlNotConfigured := endpoint.TTL(300)
 	ttlAnnotation, exists := annotations[ttlAnnotationKey]
 	if !exists {
 		return ttlNotConfigured, nil

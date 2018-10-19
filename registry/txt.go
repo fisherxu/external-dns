@@ -129,7 +129,8 @@ func (im *TXTRegistry) ApplyChanges(changes *plan.Changes) error {
 			r.Labels = make(map[string]string)
 		}
 		r.Labels[endpoint.OwnerLabelKey] = im.ownerID
-		txt := endpoint.NewEndpoint(im.mapper.toTXTName(r.DNSName), endpoint.RecordTypeTXT, r.Labels.Serialize(true))
+		txt := endpoint.NewEndpointWithTTL(im.mapper.toTXTName(r.DNSName), endpoint.RecordTypeTXT, r.RecordTTL, r.Labels.Serialize(true))
+		txt.Labels[endpoint.OwnerLabelKey] = im.ownerID
 		filteredChanges.Create = append(filteredChanges.Create, txt)
 
 		if im.cacheInterval > 0 {
@@ -137,9 +138,19 @@ func (im *TXTRegistry) ApplyChanges(changes *plan.Changes) error {
 		}
 	}
 
-	for _, r := range filteredChanges.Delete {
-		txt := endpoint.NewEndpoint(im.mapper.toTXTName(r.DNSName), endpoint.RecordTypeTXT, r.Labels.Serialize(true))
+	var endpoints []*endpoint.Endpoint
+	if len(filteredChanges.Delete)+len(filteredChanges.UpdateOld)+len(filteredChanges.UpdateNew) > 0 {
+		eps, err := im.provider.Records()
+		if err != nil {
+			return err
+		}
+		endpoints = append(endpoints, eps...)
+	}
 
+	for _, r := range filteredChanges.Delete {
+		txt := endpoint.NewEndpointWithTTL(im.mapper.toTXTName(r.DNSName), endpoint.RecordTypeTXT, r.RecordTTL, r.Labels.Serialize(true))
+		txt.ZoneID = r.ZoneID
+		txt.RecordsetID = getRecordID(endpoints, im.mapper.toTXTName(r.DNSName))
 		// when we delete TXT records for which value has changed (due to new label) this would still work because
 		// !!! TXT record value is uniquely generated from the Labels of the endpoint. Hence old TXT record can be uniquely reconstructed
 		filteredChanges.Delete = append(filteredChanges.Delete, txt)
@@ -151,7 +162,9 @@ func (im *TXTRegistry) ApplyChanges(changes *plan.Changes) error {
 
 	// make sure TXT records are consistently updated as well
 	for _, r := range filteredChanges.UpdateOld {
-		txt := endpoint.NewEndpoint(im.mapper.toTXTName(r.DNSName), endpoint.RecordTypeTXT, r.Labels.Serialize(true))
+		txt := endpoint.NewEndpointWithTTL(im.mapper.toTXTName(r.DNSName), endpoint.RecordTypeTXT, r.RecordTTL, r.Labels.Serialize(true))
+		txt.ZoneID = r.ZoneID
+		txt.RecordsetID = getRecordID(endpoints, im.mapper.toTXTName(r.DNSName))
 		// when we updateOld TXT records for which value has changed (due to new label) this would still work because
 		// !!! TXT record value is uniquely generated from the Labels of the endpoint. Hence old TXT record can be uniquely reconstructed
 		filteredChanges.UpdateOld = append(filteredChanges.UpdateOld, txt)
@@ -163,7 +176,9 @@ func (im *TXTRegistry) ApplyChanges(changes *plan.Changes) error {
 
 	// make sure TXT records are consistently updated as well
 	for _, r := range filteredChanges.UpdateNew {
-		txt := endpoint.NewEndpoint(im.mapper.toTXTName(r.DNSName), endpoint.RecordTypeTXT, r.Labels.Serialize(true))
+		txt := endpoint.NewEndpointWithTTL(im.mapper.toTXTName(r.DNSName), endpoint.RecordTypeTXT, r.RecordTTL, r.Labels.Serialize(true))
+		txt.ZoneID = r.ZoneID
+		txt.RecordsetID = getRecordID(endpoints, im.mapper.toTXTName(r.DNSName))
 		filteredChanges.UpdateNew = append(filteredChanges.UpdateNew, txt)
 		// add new version of record to cache
 		if im.cacheInterval > 0 {
@@ -172,6 +187,15 @@ func (im *TXTRegistry) ApplyChanges(changes *plan.Changes) error {
 	}
 
 	return im.provider.ApplyChanges(filteredChanges)
+}
+
+func getRecordID(endpoints []*endpoint.Endpoint, dnsName string) string {
+	for _, ep := range endpoints {
+		if ep.DNSName == dnsName && ep.RecordType == endpoint.RecordTypeTXT {
+			return ep.RecordsetID
+		}
+	}
+	return ""
 }
 
 /**
