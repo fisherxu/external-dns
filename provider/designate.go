@@ -356,12 +356,12 @@ func addEndpoint(ep *endpoint.Endpoint, recordSets map[string]*recordSet, delete
 		}
 	}
 	if rs.zoneID == "" {
-		rs.zoneID = ep.Labels[ZoneID]
+		rs.zoneID = ep.ZoneID
 	}
 	if rs.recordSetID == "" {
-		rs.recordSetID = ep.Labels[RecordSetID]
+		rs.recordSetID = ep.RecordsetID
 	}
-	for _, rec := range strings.Split(ep.Labels[OriginalRecords], "\000") {
+	for _, rec := range ep.Targets {
 		if _, ok := rs.names[rec]; !ok && rec != "" {
 			rs.names[rec] = true
 		}

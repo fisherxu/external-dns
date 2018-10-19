@@ -116,9 +116,8 @@ func (p *HuaweiCloudProvider) Records() ([]*endpoint.Endpoint, error) {
 
 	for _, record := range records {
 		ep := endpoint.NewEndpointWithTTL(record.Name, record.Type, endpoint.TTL(record.TTL), record.Records...)
-		ep.Labels[RecordSetID] = record.ID
-		ep.Labels[ZoneID] = record.ZoneID
-		ep.Labels[OriginalRecords] = strings.Join(record.Records, "\000")
+		ep.ZoneID = record.ZoneID
+		ep.RecordsetID = record.ID
 		endpoints = append(endpoints, ep)
 	}
 	return endpoints, nil

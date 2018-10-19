@@ -128,6 +128,14 @@ type Endpoint struct {
 	// ProviderSpecific stores provider specific config
 	// +optional
 	ProviderSpecific ProviderSpecific `json:"providerSpecific,omitempty"`
+
+	// add by huawei paas, to record zoneID/RecordsetID for endpoint
+	// ZoneID stores ID of endpoint's zone
+	// +optional
+	ZoneID string `json:"zoneID,omitempty"`
+	// RecordsetID stores ID of endpoint's Recordset
+	// +optional
+	RecordsetID string `json:"recordsetID,omitempty"`
 }
 
 // NewEndpoint initialization method to be used to create an endpoint
