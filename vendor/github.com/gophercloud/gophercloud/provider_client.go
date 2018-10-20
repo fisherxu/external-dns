@@ -74,6 +74,9 @@ type ProviderClient struct {
 	mut *sync.RWMutex
 
 	reauthmut *reauthlock
+
+	// AkskClient is a reference to the provider that implements huawei aksk for this service.
+	AkskClient *AkskClient
 }
 
 type reauthlock struct {
@@ -244,10 +247,19 @@ func (client *ProviderClient) Request(method, url string, options *RequestOpts) 
 
 	prereqtok := req.Header.Get("X-Auth-Token")
 
-	// Issue the request.
-	resp, err := client.HTTPClient.Do(req)
-	if err != nil {
-		return nil, err
+	var resp *http.Response
+	if client.AkskClient == nil {
+		// Issue the request.
+		resp, err = client.HTTPClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		r := client.AkskClient.NewRequest(req.Method, req.URL.String(), nil, req.Body)
+		resp, err = client.AkskClient.DoRequest(nil, r)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Allow default OkCodes if none explicitly set

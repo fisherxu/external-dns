@@ -127,7 +127,7 @@ var defaultConfig = &Config{
 	AzureConfigFile:          "/etc/kubernetes/azure.json",
 	AzureResourceGroup:       "",
 	CloudflareProxied:        false,
-	HuaweiCloudConfigFile:    "/etc/kubernetes/huawei.json",
+	HuaweiCloudConfigFile:    "/etc/hwcloud/huawei.json",
 	InfobloxGridHost:         "",
 	InfobloxWapiPort:         443,
 	InfobloxWapiUsername:     "admin",

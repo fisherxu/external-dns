@@ -14,8 +14,11 @@ limitations under the License.
 package provider
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"net"
+	"net/http"
 	"strings"
 	"time"
 
@@ -54,20 +57,40 @@ type HuaweiCloudProvider struct {
 }
 
 type huaweiCloudConfig struct {
-	IAMEndpoint string `json:"iamEndpoint" yaml:"iamEndpoint"`
+	AuthType    string `json:"authType" yaml:"authType"`
 	DNSEndpoint string `json:"dnsEndpoint" yaml:"dnsEndpoint"`
 	ProjectID   string `json:"projectId" yaml:"projectId"`
+
+	// token config
+	IAMEndpoint string `json:"iamEndpoint" yaml:"iamEndpoint"`
 	Username    string `json:"username" yaml:"username"`
 	Password    string `json:"password" yaml:"password"`
 	Domainname  string `json:"domainname" yaml:"domainname"`
-	ZoneID      string `json:"zoneId" yaml:"zoneId"`
-	Token       string `json:"-" yaml:"-"`
-	Expired     bool   `json:"-" yaml:"-"`
+
+	// aksk config
+	Region        string `json:"region" yaml:"region"`
+	AccessKeyPath string `json:"accessKeyPath" yaml:"accessKeyPath"`
+	SecretKeyPath string `json:"secretKeyPath" yaml:"secretKeyPath"`
+	ServiceType   string `json:"serviceType" yaml:"serviceType"`
+
+	ZoneID  string `json:"zoneId" yaml:"zoneId"`
+	Token   string `json:"-" yaml:"-"`
+	Expired bool   `json:"-" yaml:"-"`
+}
+
+var defaultHuaweiCloudConfig = &huaweiCloudConfig{
+	AuthType:      "aksk",
+	DNSEndpoint:   "https://dns.myhuaweicloud.com/v2",
+	IAMEndpoint:   "https://iam.myhuaweicloud.com/v3/auth/tokens/",
+	Region:        "cn-north-1",
+	ServiceType:   "all",
+	AccessKeyPath: "/etc/hwcloud/accesskey",
+	SecretKeyPath: "/etc/hwcloud/secretkey",
 }
 
 // NewHuaweiCloudProvider creates a new Huawei Cloud provider.
 func NewHuaweiCloudProvider(configFile string, domainFilter DomainFilter, zoneIDFileter ZoneIDFilter) (*HuaweiCloudProvider, error) {
-	cfg := &huaweiCloudConfig{}
+	cfg := defaultHuaweiCloudConfig
 	contents, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read Huawei Cloud config file '%s': %v", configFile, err)
@@ -321,6 +344,7 @@ func (p *HuaweiCloudProvider) updateProviderClient() {
 			log.Errorf("Get Token from Huawei Cloud failed: %v", err)
 		}
 	}
+
 	p.client.ProviderClient = providerClient
 }
 
@@ -334,4 +358,46 @@ func getProviderClientFromIAM(username, password, domainname, projectID, iamEndp
 	}
 	log.Infof("AuthOptions: %v", opts)
 	return openstack.AuthenticatedClient(opts)
+}
+
+func getProviderClientFromAksk(region, accessKeyPath, secretKeyPath, serviceType, id string) (*gophercloud.ProviderClient, error) {
+	accessKey, err := ioutil.ReadFile(accessKeyPath)
+	if err != nil {
+		return nil, err
+	}
+	secretKey, err := ioutil.ReadFile(secretKeyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	access := &gophercloud.AccessInfo{
+		AccessKey:   strings.TrimSpace(string(accessKey)),
+		SecretKey:   strings.TrimSpace(string(secretKey)),
+		Region:      region,
+		ServiceType: serviceType,
+	}
+
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+			Dial: func(netw, addr string) (net.Conn, error) {
+				c, err := net.DialTimeout(netw, addr, time.Second*15)
+				if err != nil {
+					return nil, err
+				}
+				return c, nil
+			},
+			MaxIdleConnsPerHost:   10,
+			ResponseHeaderTimeout: time.Second * 15,
+		},
+	}
+
+	akskClient := &gophercloud.AkskClient{
+		Client:   httpClient,
+		Access:   access,
+		TenantId: id,
+	}
+	return &gophercloud.ProviderClient{AkskClient: akskClient}, nil
 }
