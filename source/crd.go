@@ -117,7 +117,17 @@ func (cs *crdSource) Endpoints() ([]*endpoint.Endpoint, error) {
 	}
 
 	for _, dnsEndpoint := range result.Items {
-		endpoints = append(endpoints, dnsEndpoint.Spec.Endpoints...)
+		// add by huawei group, workgroud for the length limit of hwcloud
+		if len(dnsEndpoint.Spec.Endpoints) > 0 {
+			urlList := strings.Split(dnsEndpoint.Spec.Endpoints[0].DNSName, ".")
+			if len(urlList) >= 6 {
+				dnsEndpoint.Spec.Endpoints[0].DNSName = strings.Join(urlList[:3], ".") + "." + strings.Join(urlList[len(urlList)-2:], ".")
+			}
+		} else {
+			continue
+		}
+		endpoints = append(endpoints, dnsEndpoint.Spec.Endpoints[0])
+
 		dnsEndpoint.Status.ObservedGeneration = dnsEndpoint.Generation
 		// Update the ObservedGeneration
 		_, err = cs.UpdateStatus(&dnsEndpoint)
