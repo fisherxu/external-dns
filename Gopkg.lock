@@ -220,6 +220,14 @@
   revision = "524e7daccd99651cdb56426eb15b7d61f9597a5c"
 
 [[projects]]
+  digest = "1:eb53021a8aa3f599d29c7102e65026242bdedce998a54837dc67f14b6a97c5fd"
+  name = "github.com/fsnotify/fsnotify"
+  packages = ["."]
+  pruneopts = ""
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  version = "v1.4.7"
+
+[[projects]]
   digest = "1:b13707423743d41665fd23f0c36b2f37bb49c30e94adb813319c44188a51ba22"
   name = "github.com/ghodss/yaml"
   packages = ["."]
@@ -1097,6 +1105,7 @@
     "github.com/dnsimple/dnsimple-go/dnsimple",
     "github.com/exoscale/egoscale",
     "github.com/ffledgling/pdns-go",
+    "github.com/fsnotify/fsnotify",
     "github.com/gophercloud/gophercloud",
     "github.com/gophercloud/gophercloud/openstack",
     "github.com/gophercloud/gophercloud/openstack/dns/v2/recordsets",
