@@ -20,16 +20,16 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/dns/v2/recordsets"
 	"github.com/gophercloud/gophercloud/openstack/dns/v2/zones"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/kubernetes-incubator/external-dns/endpoint"
 	"github.com/kubernetes-incubator/external-dns/plan"
@@ -88,6 +88,10 @@ var defaultHuaweiCloudConfig = &huaweiCloudConfig{
 	SecretKeyPath: "/etc/hwcloud/secretkey",
 }
 
+var fileChanged = false
+
+var mutex sync.Mutex
+
 // NewHuaweiCloudProvider creates a new Huawei Cloud provider.
 func NewHuaweiCloudProvider(configFile string, domainFilter DomainFilter, zoneIDFileter ZoneIDFilter) (*HuaweiCloudProvider, error) {
 	cfg := defaultHuaweiCloudConfig
@@ -126,11 +130,25 @@ func NewHuaweiCloudProvider(configFile string, domainFilter DomainFilter, zoneID
 		zoneIDFilter: zoneIDFileter,
 	}
 
-	go wait.Forever(provider.updateProviderClient, 2*time.Hour)
+	err = Newfilewatcher(cfg.AccessKeyPath, cfg.SecretKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to watch aksk files, err: %v", err)
+	}
 	return provider, nil
 }
 
 func (p *HuaweiCloudProvider) Records() ([]*endpoint.Endpoint, error) {
+	mutex.Lock()
+	if fileChanged {
+		err := p.updateProviderClient()
+		if err != nil {
+			mutex.Unlock()
+			return nil, err
+		}
+		fileChanged = false
+	}
+	mutex.Unlock()
+
 	records, err := p.records()
 	if err != nil {
 		return nil, err
@@ -147,6 +165,17 @@ func (p *HuaweiCloudProvider) Records() ([]*endpoint.Endpoint, error) {
 }
 
 func (p *HuaweiCloudProvider) ApplyChanges(changes *plan.Changes) error {
+	mutex.Lock()
+	if fileChanged {
+		err := p.updateProviderClient()
+		if err != nil {
+			mutex.Unlock()
+			return err
+		}
+		fileChanged = false
+	}
+	mutex.Unlock()
+
 	managedZones, err := p.zones()
 	if err != nil {
 		return err
@@ -173,7 +202,10 @@ func (p *HuaweiCloudProvider) ApplyChanges(changes *plan.Changes) error {
 			failedrecordSets = append(failedrecordSets, rs.dnsName)
 		}
 	}
-	return fmt.Errorf("Failed to submit all changes for the following recordsets: %v", failedrecordSets)
+	if len(failedrecordSets) > 0 {
+		return fmt.Errorf("Failed to submit all changes for the following recordsets: %v", failedrecordSets)
+	}
+	return nil
 }
 
 // apply recordset changes by inserting/updating/deleting recordsets
@@ -299,7 +331,7 @@ func (p *HuaweiCloudProvider) records() ([]recordsets.RecordSet, error) {
 func (p *HuaweiCloudProvider) zones() (map[string]string, error) {
 	allPages, err := zones.List(p.client, nil).AllPages()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	result := map[string]string{}
@@ -330,22 +362,25 @@ func (p *HuaweiCloudProvider) recordsets(zoneID string) ([]recordsets.RecordSet,
 	return allRRs, nil
 }
 
-func (p *HuaweiCloudProvider) updateProviderClient() {
+func (p *HuaweiCloudProvider) updateProviderClient() error {
 	var providerClient *gophercloud.ProviderClient
 	var err error
 	if p.config.AuthType == "token" {
 		providerClient, err = getProviderClientFromIAM(p.config.Username, p.config.Password, p.config.Domainname, p.config.ProjectID, p.config.IAMEndpoint)
 		if err != nil {
 			log.Errorf("Get Token from Huawei Cloud failed: %v", err)
+			return err
 		}
 	} else {
 		providerClient, err = getProviderClientFromAksk(p.config.Region, p.config.AccessKeyPath, p.config.SecretKeyPath, p.config.ServiceType, p.config.ProjectID)
 		if err != nil {
-			log.Errorf("Get Token from Huawei Cloud failed: %v", err)
+			log.Errorf("Update aksk client failed: %v", err)
+			return err
 		}
 	}
 
 	p.client.ProviderClient = providerClient
+	return nil
 }
 
 func getProviderClientFromIAM(username, password, domainname, projectID, iamEndpoint string) (*gophercloud.ProviderClient, error) {
@@ -400,4 +435,35 @@ func getProviderClientFromAksk(region, accessKeyPath, secretKeyPath, serviceType
 		TenantId: id,
 	}
 	return &gophercloud.ProviderClient{AkskClient: akskClient}, nil
+}
+
+func Newfilewatcher(accessKeyPath, secretKeyPath string) error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer watcher.Close()
+		for {
+			select {
+			case <-watcher.Events:
+				mutex.Lock()
+				fileChanged = true
+				mutex.Unlock()
+			case err = <-watcher.Errors:
+				log.Errorf("Received an error from file watcher: %s", err)
+			}
+		}
+	}()
+
+	err = watcher.Add(accessKeyPath)
+	if err != nil {
+		return err
+	}
+	err = watcher.Add(secretKeyPath)
+	if err != nil {
+		return err
+	}
+	return nil
 }
